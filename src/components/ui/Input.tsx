@@ -1,3 +1,5 @@
+"use client";
+
 import React, { FC, InputHTMLAttributes } from "react";
 import { ComponentBaseProps } from "@/lib/types";
 
