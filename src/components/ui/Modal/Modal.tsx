@@ -85,7 +85,7 @@ ModalHeader.displayName = "ModalHeader";
 
 // C. Modal.Content
 export const ModalContent: FC<{ children: ReactNode }> = ({ children }) => {
-  return <div className="p-6">{children}</div>;
+  return <div className="p-6 text-gray-800 rounded-b-lg">{children}</div>;
 };
 
 // --- 3. THE MAIN COMPOUND COMPONENT (Provider) ---

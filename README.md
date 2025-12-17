@@ -18,8 +18,6 @@ It leverages the **Next.js App Router** and **React Server Components (RSC)** to
 
 ## ⭐ Core Feature Showcase
 
-## ⭐ Core Feature Showcase
-
 ### 1. Data Fetching and Content Types Dashboard (RSC)
 
 The main dashboard (`app/page.tsx`) functions as an **asynchronous Server Component** responsible for fetching initial data.
@@ -34,61 +32,80 @@ The process of creating new content types is handled entirely on the client side
 - **Compound Component Fix:** The `Modal` component's internal rendering logic was corrected to ensure it **unconditionally renders its children**, resolving critical rendering errors where the dashboard table (RSC) disappeared when the modal was present.
 - **Form Integration:** The form logic is isolated in a Client Component (`ContentTypeForm.tsx`) using `useState` for controlled inputs and dynamic slug generation, and it uses `useModal()` to close the dialog.
 
-### [Next] Data Mutation and Optimistic UI
+### 3. [Next] Data Mutation and Optimistic UI
 
 This upcoming module will implement the data persistence flow: simulating a server-side POST request from the Client Component Form and using Next.js's native cache invalidation (`revalidatePath`) to update the dashboard without a full page reload, leveraging the App Router's data fetching capabilities.
+
+### 4. Data Mutation & Optimistic UI (Server Actions)
+
+The system implements a full-stack data mutation flow using Next.js **Server Actions**, providing a seamless "zero-latency" feel.
+
+- **Optimistic Updates:** Using the `useOptimistic` hook, the UI reflects changes instantly (with a "pending" state) before the server confirms the operation.
+- **Server Actions:** Data is processed securely on the server via `createContentTypeAction`, which handles validation and persistence logic.
+- **Automatic Revalidation:** Uses `revalidatePath('/')` to purge the client cache and fetch fresh data without a full page reload, maintaining the SPA-like experience within RSC.
+
+### 5. Advanced Dark Mode & UI Hierarchy
+
+A custom-engineered dark mode that prioritizes visual ergonomics and depth.
+
+- **Color Palettes:** Balanced contrast using deep grays (`#121212`) for the base and elevated surfaces (`#1c1c1c`) for cards and modals.
+- **CSS Variable Overrides:** Strategic use of Tailwind utility classes to override global CSS variables, ensuring high-contrast labels and readable placeholders in all themes.
 
 ---
 
 ## 🧩 Usage Example & Server/Client Boundary Strategy
 
-To guarantee **serialization integrity across the Next.js Server/Client boundary**, all Modal sub-components are imported as **explicit named exports** when used inside a Server Component (`app/page.tsx`).
+The project follows a "High-Level Client Entry" pattern. The Home page (RSC) fetches the data and passes it to DashboardList (RCC), which manages the interactive state and optimistic updates.
 
 ```tsx
-// app/page.tsx (Async React Server Component)
+// src/components/content/DashboardList.tsx (Refined RCC Pattern)
 
-import Modal, {
-  ModalTrigger,
-  ModalHeader,
-  ModalContent,
-} from "@/components/ui/Modal/Modal";
-import { ContentTypeForm } from "@/components/content/ContentTypeForm"; // RCC with useState
-import { getContentViews } from "@/services/contentService"; // RSC Data Fetching
+export function DashboardList({ initialContentTypes }: DashboardListProps) {
+  // 1. Optimistic UI State
+  const [optimisticTypes, addOptimistic] = useOptimistic(
+    initialContentTypes,
+    (state, newType) => [...state, { ...newType, isOptimistic: true }]
+  );
 
-export default async function Home() {
-  // 1. Fetching data on the server (RSC capability)
-  const contentTypes = await getContentViews();
+  // 2. Integration with Server Actions
+  const handleCreate = async (formData: FormData) => {
+    // Add temporary UI feedback
+    addOptimistic({ name: formData.get("name"), ... });
+
+    // Execute server-side persistence
+    await createContentTypeAction(formData);
+  };
 
   return (
-    // 2. The Modal component provides context to all children
-    <Modal initialOpen={false}>
-      {/* The main dashboard section (RSC) includes the trigger */}
-      <section>
-        <div className="flex justify-end p-4">
-          <ModalTrigger>
-            <Button variant="primary">Create New Content Type</Button>
-          </ModalTrigger>
-        </div>
-        {/* Table renders the fetched RSC data (contentTypes) */}
-        {/* ... (Table component mapping data) ... */}
-      </section>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold dark:text-white">Dashboard</h1>
 
-      {/* The modal window content (RCC) */}
-      <ModalHeader title="Create New Content Type" />
-      <ModalContent>
-        {/* The form handles all client state and interaction */}
-        <ContentTypeForm />
-      </ModalContent>
-    </Modal>
+      {/* Compound Component Pattern for Modals */}
+      <Modal trigger={<Button>Create New Content Type</Button>}>
+        <ModalHeader title="Create New Content Type" />
+        <ModalContent>
+          <ContentTypeForm action={handleCreate} />
+        </ModalContent>
+      </Modal>
+
+      {/* Table renders the optimistic state */}
+      <div className="bg-white dark:bg-[#1c1c1c] rounded-lg shadow">
+        {optimisticTypes.map(type => (
+          <div key={type.id} className={type.isOptimistic ? "opacity-50" : ""}>
+            {type.name}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 ```
 
 This pattern ensures:
 
-- Predictable component resolution
-- Correct RSC serialization
-- Clear ownership between Server and Client logic
+- **Instant Responsiveness**: Users see their changes immediately.
+- **Server-Side Security**: Data is validated and persisted via Server Actions.
+- **Visual Hierarchy**: Components use specific dark-mode backgrounds (#1c1c1c) to stand out from the main page.
 
 ## ⚙️ Critical Technical Challenges Overcome
 
@@ -141,6 +158,13 @@ Ensuring:
 - Full type safety
 - Proper inference of injected handlers
 - Zero runtime ambiguity
+
+### 4️⃣ Dark Mode Specificity and CSS Variables
+
+A conflict arose where native CSS variables in `globals.css` were overriding Tailwind's dark mode utility classes.
+
+- **Challenge:** The `body { background: var(--background) }` rule was too specific, preventing components from having distinct dark backgrounds.
+- **Resolution:** Moved background logic to Tailwind utility classes directly in `layout.tsx` (`dark:bg-[#121212]`). This allowed for a granular visual hierarchy where modals and tables can have elevated background colors (`#1c1c1c`) distinct from the main page.
 
 ## 🏁 Getting Started
 

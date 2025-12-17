@@ -3,8 +3,15 @@
 import { useOptimistic } from "react";
 import { createContentTypeAction } from "@/actions";
 import { ContentType } from "@/lib/types/content";
-import { SubmitButton } from "@/components/ui/SubmitButton";
+import Modal, {
+  ModalTrigger,
+  ModalContent,
+  ModalHeader,
+} from "@/components/ui/Modal/Modal";
+import Button from "@/components/ui/Button";
+import { ContentTypeForm } from "./ContentTypeForm";
 
+// Type for the optimistic element (includes the temporary flag)
 type OptimisticContentType = ContentType & { isOptimistic?: boolean };
 
 interface DashboardListProps {
@@ -18,11 +25,11 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
       currentState: OptimisticContentType[],
       newOptimisticItem: OptimisticContentType
     ) => {
-      // Logic to temporarily add the new item to the array
       return [...currentState, newOptimisticItem];
     }
   );
 
+  // Wrapper function for the Server Action (handles Optimistic UI flow)
   const handleCreate = async (formData: FormData) => {
     const name = formData.get("name") as string;
     const slug = formData.get("slug") as string;
@@ -37,17 +44,14 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
       description: "New Content Type (Pending)",
       fieldsCount: 0,
       lastUpdated: new Date(),
-      isOptimistic: true, // Optimistic flag for styling (e.g., greyed out)
+      isOptimistic: true,
     });
 
     // B. Real Mutation: Invoke the Server Action
     try {
       await createContentTypeAction(formData);
-      // On success, revalidatePath() inside the action forces the RSC fetch
     } catch (error) {
-      // In a real scenario, you might add logic here to manually revert the state
       console.error("Mutation failed:", error);
-      // For now, useOptimistic handles the automatic reversion on error
     }
   };
 
@@ -55,29 +59,20 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Content Types Dashboard</h1>
 
-      {/* Form for creating new items, using the Server Action wrapper */}
-      <form action={handleCreate} className="p-4 border rounded-lg bg-gray-50">
-        <h2 className="text-xl font-semibold mb-3">Create New Type</h2>
-        {/* Simplified form structure for illustration */}
-        <input
-          type="text"
-          name="name"
-          placeholder="Name"
-          className="p-2 border rounded mr-2"
-          required
-        />
-        <input
-          type="text"
-          name="slug"
-          placeholder="Slug"
-          className="p-2 border rounded mr-2"
-          required
-        />
-        <SubmitButton>Create Type</SubmitButton>
-      </form>
+      {/* Modal Integration: The trigger button for the creation flow */}
+      <Modal
+        initialOpen={false}
+        trigger={<Button variant="primary">Create New Content Type</Button>}
+      >
+        <ModalHeader title="Create New Content Type" />
+        <ModalContent>
+          {/* Pass the handleCreate function (Server Action wrapper) to the form */}
+          <ContentTypeForm action={handleCreate} />
+        </ModalContent>
+      </Modal>
 
-      {/* List/Table Rendering */}
-      <ul className="divide-y divide-gray-200">
+      {/* List/Table Rendering: Displays the optimistic list */}
+      <ul className="divide-y divide-gray-200 mt-6">
         {optimisticContentTypes.map((type) => (
           <li
             key={type.id}

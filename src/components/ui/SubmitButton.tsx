@@ -8,15 +8,11 @@ import Button from "./Button";
  * to display a loading state and disable the button during Server Action execution.
  */
 export function SubmitButton({ children }: { children: React.ReactNode }) {
-  // React hook that provides the pending status of the form's Server Action.
   const { pending } = useFormStatus();
 
   return (
-    <Button
-      type="submit"
-      variant="primary"
-      disabled={pending} // Disabled while the Server Action is in flight
-    >
+    <Button type="submit" variant="primary" disabled={pending}>
+      {/* If pending, show 'Processing...', otherwise show the children prop (e.g., 'Create Type') */}
       {pending ? "Processing..." : children}
     </Button>
   );

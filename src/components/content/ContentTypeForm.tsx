@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Input from "@/components/ui/Input";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import Button from "@/components/ui/Button";
 import { useModal } from "@/components/ui/Modal/Modal";
 
-// Define the shape of the form data
 interface FormState {
   name: string;
   slug: string;
@@ -18,16 +18,20 @@ const initialFormState: FormState = {
   description: "",
 };
 
-export const ContentTypeForm: React.FC = () => {
-  const [formData, setFormData] = useState<FormState>(initialFormState);
-  const { closeModal } = useModal(); // Hook to access modal context
+interface ContentTypeFormProps {
+  action: (formData: FormData) => Promise<void>;
+}
 
+export const ContentTypeForm: React.FC<ContentTypeFormProps> = ({ action }) => {
+  const [formData, setFormData] = useState<FormState>(initialFormState); // RESTORED
+  const { closeModal } = useModal();
+
+  // RESTORED: Client-side logic for generating the slug
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { id, value } = e.target;
 
-    // Simple logic to automatically generate slug from name
     let newSlug = formData.slug;
     if (id === "name") {
       newSlug = value
@@ -39,30 +43,27 @@ export const ContentTypeForm: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       [id]: value,
-      ...(id === "name" && { slug: newSlug }), // Update slug only if name changes
+      ...(id === "name" && { slug: newSlug }),
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Wrapper function to execute the Server Action and immediately close the modal.
+  const handleAction = (formData: FormData) => {
+    // 1. Execute the Server Action/Optimistic wrapper logic
+    action(formData);
 
-    console.log("Submitting new Content Type:", formData);
-
-    // Simulate API success: close modal and reset form
-    alert(`Content Type "${formData.name}" created successfully!`);
-
-    setFormData(initialFormState); // Reset form
-    closeModal(); // Close the modal via context
+    // 2. Close modal immediately for a fast UX
+    closeModal();
+    setFormData(initialFormState); // Reset form state after submission
   };
 
-  const isFormValid =
-    formData.name.trim() !== "" && formData.slug.trim() !== "";
-
   return (
-    <form onSubmit={handleSubmit} className="p-4 space-y-4">
+    // Pass the handleAction wrapper to the native 'action' attribute
+    <form action={handleAction} className="p-4 space-y-4 bg-white">
       <Input
         label="Name"
         id="name"
+        name="name"
         value={formData.name}
         onChange={handleChange}
         placeholder="e.g., Blog Post"
@@ -72,6 +73,7 @@ export const ContentTypeForm: React.FC = () => {
       <Input
         label="Slug"
         id="slug"
+        name="slug"
         value={formData.slug}
         onChange={handleChange}
         placeholder="e.g., blog-post"
@@ -87,6 +89,7 @@ export const ContentTypeForm: React.FC = () => {
         </label>
         <textarea
           id="description"
+          name="description"
           rows={3}
           value={formData.description}
           onChange={handleChange}
@@ -95,20 +98,12 @@ export const ContentTypeForm: React.FC = () => {
         />
       </div>
 
-      <div className="flex justify-end space-x-3 pt-4">
-        {/* Button to cancel/close the modal */}
-        <Button
-          variant="secondary"
-          onClick={closeModal}
-          type="button" // Important to prevent form submission
-        >
+      <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
+        <Button variant="secondary" onClick={closeModal} type="button">
           Cancel
         </Button>
 
-        {/* Submit button */}
-        <Button variant="primary" type="submit" disabled={!isFormValid}>
-          Create Type
-        </Button>
+        <SubmitButton>Save Content Type</SubmitButton>
       </div>
     </form>
   );
