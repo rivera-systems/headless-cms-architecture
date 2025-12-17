@@ -69,23 +69,47 @@ export const ModalTrigger: FC<{ children: ReactNode }> = ({ children }) => {
 };
 
 // B. Modal.Header
-export const ModalHeader: FC<{ title: string }> = memo(({ title }) => {
+export const ModalHeader: FC<{ title: string }> = ({ title }) => {
   const { closeModal } = useModal();
+
   return (
-    <div className="flex justify-between items-center p-4 border-b">
-      <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-      <Button variant="ghost" onClick={closeModal} className="p-1">
-        X
-      </Button>
+    <div className="flex items-center justify-between p-4 border-b dark:border-gray-800 bg-white dark:bg-[#1c1c1c] rounded-t-lg">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+        {title}
+      </h2>
+
+      <button
+        onClick={closeModal}
+        className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors"
+        aria-label="Close modal"
+      >
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
     </div>
   );
-});
+};
 
 ModalHeader.displayName = "ModalHeader";
 
 // C. Modal.Content
 export const ModalContent: FC<{ children: ReactNode }> = ({ children }) => {
-  return <div className="p-6 text-gray-800 rounded-b-lg">{children}</div>;
+  return (
+    <div className="bg-white dark:bg-[#1c1c1c] text-gray-900 dark:text-gray-100 rounded-b-lg">
+      {children}
+    </div>
+  );
 };
 
 // --- 3. THE MAIN COMPOUND COMPONENT (Provider) ---

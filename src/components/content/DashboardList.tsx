@@ -57,39 +57,38 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Content Types Dashboard</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        Content Types Dashboard
+      </h1>
 
-      {/* Modal Integration: The trigger button for the creation flow */}
       <Modal
         initialOpen={false}
         trigger={<Button variant="primary">Create New Content Type</Button>}
       >
         <ModalHeader title="Create New Content Type" />
         <ModalContent>
-          {/* Pass the handleCreate function (Server Action wrapper) to the form */}
           <ContentTypeForm action={handleCreate} />
         </ModalContent>
       </Modal>
 
-      {/* List/Table Rendering: Displays the optimistic list */}
-      <ul className="divide-y divide-gray-200 mt-6">
-        {optimisticContentTypes.map((type) => (
-          <li
-            key={type.id}
-            className={`p-4 ${
-              type.isOptimistic ? "opacity-50 text-gray-500 italic" : "bg-white"
-            }`}
-          >
-            <div className="font-medium">
-              {type.name} ({type.slug})
-            </div>
-            <div className="text-sm">{type.description}</div>
-            {type.isOptimistic && (
-              <span className="text-xs text-blue-500"> (Pending...)</span>
-            )}
-          </li>
-        ))}
-      </ul>
+      <div className="mt-6 overflow-hidden rounded-lg bg-white shadow-md dark:bg-[#1c1c1c] border dark:border-gray-800">
+        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+          {optimisticContentTypes.map((type) => (
+            <li
+              key={type.id}
+              className={`p-4 ${type.isOptimistic ? "opacity-50" : ""}`}
+            >
+              <div className="font-medium text-gray-900 dark:text-gray-100">
+                {type.name}{" "}
+                <span className="text-gray-500 text-sm">({type.slug})</span>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {type.description}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

@@ -57,34 +57,40 @@ export const ContentTypeForm: React.FC<ContentTypeFormProps> = ({ action }) => {
     setFormData(initialFormState); // Reset form state after submission
   };
 
+  const labelClasses =
+    "block text-sm font-medium text-gray-700 dark:text-gray-200";
+
+  const placeholderClasses =
+    "placeholder:text-gray-400 dark:placeholder:text-gray-500";
+
   return (
     // Pass the handleAction wrapper to the native 'action' attribute
-    <form action={handleAction} className="p-4 space-y-4 bg-white">
+    <form
+      action={handleAction}
+      className="space-y-4 p-6 bg-white dark:bg-[#1c1c1c] rounded-b-lg"
+    >
+      <label className={`${labelClasses}`}>Name</label>
       <Input
-        label="Name"
         id="name"
         name="name"
         value={formData.name}
         onChange={handleChange}
         placeholder="e.g., Blog Post"
         required
+        className={`dark:bg-[#2a2a2a] dark:text-white dark:border-gray-700 ${placeholderClasses}`}
       />
-
+      <label className={`${labelClasses}`}>Slug</label>
       <Input
-        label="Slug"
         id="slug"
         name="slug"
         value={formData.slug}
         onChange={handleChange}
         placeholder="e.g., blog-post"
+        className={`dark:bg-[#2a2a2a] dark:text-white dark:border-gray-700 ${placeholderClasses}`}
         required
       />
-
       <div className="space-y-1">
-        <label
-          htmlFor="description"
-          className="block text-sm font-medium text-gray-700"
-        >
+        <label htmlFor="description" className={`${labelClasses}`}>
           Description (Optional)
         </label>
         <textarea
@@ -93,7 +99,7 @@ export const ContentTypeForm: React.FC<ContentTypeFormProps> = ({ action }) => {
           rows={3}
           value={formData.description}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+          className={`mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white p-2 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none ${placeholderClasses}`}
           placeholder="A brief description of this content type."
         />
       </div>
