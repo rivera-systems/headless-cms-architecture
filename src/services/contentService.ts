@@ -47,3 +47,30 @@ export async function getContentViews(): Promise<ContentType[]> {
   // In a real environment, this would be a fetch(db_url) or db.query()
   return mockContentTypes;
 }
+
+/**
+ * Simulates saving a new Content Type to the database.
+ * @param newType Object containing the name and slug of the new type.
+ * @returns Promise that resolves to the ID of the new Content Type.
+ */
+export async function createContentType(newType: {
+  name: string;
+  slug: string;
+}): Promise<string> {
+  await delay(MS_IN_SECOND * 0.5); // Simulate DB latency
+
+  const newId = `ct-${mockContentTypes.length + 1}`;
+
+  const newContentType: ContentType = {
+    id: newId,
+    name: newType.name,
+    slug: newType.slug,
+    description: "New Content Type created by user.",
+    fieldsCount: 0,
+    lastUpdated: new Date(),
+  };
+
+  mockContentTypes.push(newContentType); // Añadir al mock (en memoria)
+
+  return newId;
+}
