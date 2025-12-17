@@ -11,25 +11,24 @@ import React, {
   ReactElement,
   ButtonHTMLAttributes,
   Children,
+  useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 import { useToggle } from "@/lib/hooks/useToggle";
 import Button from "../Button";
 
 // --- 1. CONTEXT DEFINITION ---
 
 interface ModalContextType {
-  // State from our custom hook
   isOpen: boolean;
-  // Controls from our custom hook (memorized via useCallback in useToggle)
   closeModal: () => void;
   openModal: () => void;
   toggleModal: () => void;
 }
 
-// Create the context instance. We use 'null' initially and throw an error
-// if used outside the provider (advanced TS safety).
 const ModalContext = createContext<ModalContextType | null>(null);
-const useModal = () => {
+
+export const useModal = () => {
   const context = useContext(ModalContext);
   if (!context) {
     throw new Error("useModal must be used within a <Modal>");
@@ -37,29 +36,25 @@ const useModal = () => {
   return context;
 };
 
-// --- 2. THE COMPOUND SUB-COMPONENTS (Modified for simplicity) ---
+// --- 2. THE COMPOUND SUB-COMPONENTS---
 
 // A. Modal.Trigger - Handles the click and cloning
 export const ModalTrigger: FC<{ children: ReactNode }> = ({ children }) => {
   const { toggleModal } = useModal();
 
-  // Find the single valid element (the button) ignoring whitespace
   const childrenArray = Children.toArray(children);
   const buttonElement = childrenArray.find((child) => isValidElement(child));
 
   if (buttonElement) {
-    // Corrected TS casting for safe cloning
     const elementToClone = buttonElement as ReactElement<
       ButtonHTMLAttributes<HTMLButtonElement>
     >;
 
-    // Clone and inject the handler.
     return React.cloneElement(elementToClone, {
       onClick: toggleModal,
     });
   }
 
-  // Renders a basic div if no valid child is found (for debugging visibility)
   if (process.env.NODE_ENV !== "production") {
     return (
       <div
@@ -73,7 +68,7 @@ export const ModalTrigger: FC<{ children: ReactNode }> = ({ children }) => {
   return null;
 };
 
-// B. Modal.Header - Displays the title and the close button
+// B. Modal.Header
 export const ModalHeader: FC<{ title: string }> = memo(({ title }) => {
   const { closeModal } = useModal();
   return (
@@ -88,7 +83,7 @@ export const ModalHeader: FC<{ title: string }> = memo(({ title }) => {
 
 ModalHeader.displayName = "ModalHeader";
 
-// C. Modal.Content - The main content area
+// C. Modal.Content
 export const ModalContent: FC<{ children: ReactNode }> = ({ children }) => {
   return <div className="p-6">{children}</div>;
 };
@@ -96,49 +91,57 @@ export const ModalContent: FC<{ children: ReactNode }> = ({ children }) => {
 // --- 3. THE MAIN COMPOUND COMPONENT (Provider) ---
 
 interface ModalProps {
-  // 💡 Simplified: The children are only the content parts (Header, Content).
   children: ReactNode;
   initialOpen?: boolean;
-
-  // 💡 NEW PROP: Explicitly receive the Trigger element.
-  trigger: ReactNode;
+  trigger?: ReactNode;
 }
 
 /**
  * The main Modal Provider component.
- * It manages state and renders the explicit 'trigger' prop OUTSIDE the modal body.
- * NOTE: This version uses explicit props for Trigger/Content to bypass Next.js RSC complexities.
+ * It now renders all its children (including the dashboard section and internal ModalTrigger)
+ * directly in the page flow, while rendering the modal window itself via a portal.
  */
 const ModalComponent: FC<ModalProps> = ({
   children,
   initialOpen = false,
   trigger,
 }) => {
-  const [isOpen, toggleModal, openModal, closeModal] = useToggle(initialOpen);
+  const [isOpen, toggleModalBase, openModal, closeModal] =
+    useToggle(initialOpen);
+
+  const toggleModal = useCallback(() => toggleModalBase(), [toggleModalBase]);
 
   const contextValue = useMemo(
     () => ({ isOpen, closeModal, openModal, toggleModal }),
     [isOpen, closeModal, openModal, toggleModal]
   );
 
+  const modalPortal = useMemo(() => {
+    if (!isOpen) return null;
+
+    if (typeof document === "undefined") return null;
+
+    return createPortal(
+      <div
+        className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center transition-opacity"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full m-4 relative">
+          {children}
+        </div>
+      </div>,
+      document.body
+    );
+  }, [isOpen, children]);
+
   return (
     <ModalContext.Provider value={contextValue}>
-      {/* 💡 RENDER THE EXPLICIT TRIGGER PROP HERE */}
-      {trigger}
+      {children}
 
-      {/* RENDER THE MODAL CONTENT */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center transition-opacity"
-          aria-modal="true"
-          role="dialog"
-        >
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full m-4">
-            {/* All remaining content (Header/Content) is passed as children */}
-            {children}
-          </div>
-        </div>
-      )}
+      {trigger && <ModalTrigger>{trigger}</ModalTrigger>}
+
+      {modalPortal}
     </ModalContext.Provider>
   );
 };
@@ -151,7 +154,6 @@ type ModalCompound = FC<ModalProps> & {
   Content: typeof ModalContent;
 };
 
-// Assemble the compound component object
 const Modal = Object.assign(ModalComponent, {
   Trigger: ModalTrigger,
   Header: ModalHeader,

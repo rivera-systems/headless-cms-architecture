@@ -18,20 +18,25 @@ It leverages the **Next.js App Router** and **React Server Components (RSC)** to
 
 ## ⭐ Core Feature Showcase
 
-### Modal Compound Component
+## ⭐ Core Feature Showcase
 
-The primary architectural achievement of this project is the implementation of a **Modal Compound Component**.
+### 1. Data Fetching and Content Types Dashboard (RSC)
 
-This pattern **decouples internal state management** (handled via React Context in a Client Component) from **structural composition**, allowing consumers to declaratively define:
+The main dashboard (`app/page.tsx`) functions as an **asynchronous Server Component** responsible for fetching initial data.
 
-- Trigger
-- Header
-- Content
-- Layout
+- **Data Loading:** Data for the "Content Types" list is fetched using a mock service (`getContentViews`) which simulates database latency.
+- **Cache Control:** The service uses `unstable_noStore()` to opt-out of Next.js's data caching, ensuring the data is always fresh, which is critical for mutable CMS dashboards.
 
-directly in JSX, without leaking implementation details.
+### 2. Client-Side Interactivity and State
 
-This approach scales particularly well for **enterprise UI systems**, where components must be flexible yet consistent.
+The process of creating new content types is handled entirely on the client side to manage form state and user input.
+
+- **Compound Component Fix:** The `Modal` component's internal rendering logic was corrected to ensure it **unconditionally renders its children**, resolving critical rendering errors where the dashboard table (RSC) disappeared when the modal was present.
+- **Form Integration:** The form logic is isolated in a Client Component (`ContentTypeForm.tsx`) using `useState` for controlled inputs and dynamic slug generation, and it uses `useModal()` to close the dialog.
+
+### [Next] Data Mutation and Optimistic UI
+
+This upcoming module will implement the data persistence flow: simulating a server-side POST request from the Client Component Form and using Next.js's native cache invalidation (`revalidatePath`) to update the dashboard without a full page reload, leveraging the App Router's data fetching capabilities.
 
 ---
 
@@ -40,26 +45,43 @@ This approach scales particularly well for **enterprise UI systems**, where comp
 To guarantee **serialization integrity across the Next.js Server/Client boundary**, all Modal sub-components are imported as **explicit named exports** when used inside a Server Component (`app/page.tsx`).
 
 ```tsx
-// app/page.tsx (React Server Component)
+// app/page.tsx (Async React Server Component)
+
 import Modal, {
   ModalTrigger,
   ModalHeader,
   ModalContent,
 } from "@/components/ui/Modal/Modal";
-import Button from "@/components/ui/Button";
+import { ContentTypeForm } from "@/components/content/ContentTypeForm"; // RCC with useState
+import { getContentViews } from "@/services/contentService"; // RSC Data Fetching
 
-// Define the trigger element separately
-const modalTriggerElement = (
-  <ModalTrigger>
-    <Button variant="primary">Open CMS Configuration</Button>
-  </ModalTrigger>
-);
+export default async function Home() {
+  // 1. Fetching data on the server (RSC capability)
+  const contentTypes = await getContentViews();
 
-// Render the Modal
-<Modal initialOpen={false} trigger={modalTriggerElement}>
-  <ModalHeader title="CMS Settings Management" />
-  <ModalContent>{/* ... Modal Body Content ... */}</ModalContent>
-</Modal>;
+  return (
+    // 2. The Modal component provides context to all children
+    <Modal initialOpen={false}>
+      {/* The main dashboard section (RSC) includes the trigger */}
+      <section>
+        <div className="flex justify-end p-4">
+          <ModalTrigger>
+            <Button variant="primary">Create New Content Type</Button>
+          </ModalTrigger>
+        </div>
+        {/* Table renders the fetched RSC data (contentTypes) */}
+        {/* ... (Table component mapping data) ... */}
+      </section>
+
+      {/* The modal window content (RCC) */}
+      <ModalHeader title="Create New Content Type" />
+      <ModalContent>
+        {/* The form handles all client state and interaction */}
+        <ContentTypeForm />
+      </ModalContent>
+    </Modal>
+  );
+}
 ```
 
 This pattern ensures:
