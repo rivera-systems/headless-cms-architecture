@@ -1,90 +1,106 @@
 "use client";
 
-import { useOptimistic } from "react";
-import { createContentTypeAction } from "@/lib/actions/contentActions"; // Check path
+import { useOptimistic, useTransition } from "react";
+import {
+  createContentTypeAction,
+  deleteContentTypeAction,
+} from "@/lib/actions/contentActions";
 import { ContentType } from "@/lib/types/content";
 import Modal, { ModalContent, ModalHeader } from "@/components/ui/Modal/Modal";
 import Button from "@/components/ui/Button";
 import { ContentTypeForm } from "./ContentTypeForm";
+import { TrashIcon } from "@/components/ui/Icons";
 
-// Type for the optimistic element (includes the temporary flag)
 type OptimisticContentType = ContentType & { isOptimistic?: boolean };
 
-interface DashboardListProps {
+export function DashboardList({
+  initialContentTypes,
+}: {
   initialContentTypes: ContentType[];
-}
+}) {
+  const [isPending, startTransition] = useTransition();
 
-export function DashboardList({ initialContentTypes }: DashboardListProps) {
-  const [optimisticContentTypes, addOptimisticContentType] = useOptimistic(
+  // Optimistic state: Initialized with server data
+  const [optimisticContentTypes, setOptimistic] = useOptimistic(
     initialContentTypes as OptimisticContentType[],
-    (
-      currentState: OptimisticContentType[],
-      newOptimisticItem: OptimisticContentType
-    ) => {
-      return [...currentState, newOptimisticItem];
+    (state, action: { type: "ADD" | "DELETE"; payload: any }) => {
+      if (action.type === "ADD") return [...state, action.payload];
+      if (action.type === "DELETE")
+        return state.filter((i) => i.id !== action.payload);
+      return state;
     }
   );
 
-  // Wrapper function for the Server Action (handles Validation and Optimistic UI flow)
   const handleCreate = async (formData: FormData) => {
-    // 1. Invoke the Server Action and get the Zod validation result
-    const result = await createContentTypeAction(formData);
+    let result: any;
 
-    // 2. If validation failed, return the result to ContentTypeForm to show errors
-    // and STOP the optimistic update.
-    if (result && !result.success) {
-      return result;
-    }
+    startTransition(async () => {
+      // 1. Instant UI Feedback
+      setOptimistic({
+        type: "ADD",
+        payload: {
+          id: Date.now().toString(),
+          name: String(formData.get("name")),
+          slug: String(formData.get("slug")),
+          description: String(formData.get("description")),
+          fieldsCount: 0,
+          lastUpdated: new Date(),
+          isOptimistic: true,
+        },
+      });
 
-    // 3. If validation passed, trigger the Optimistic Action
-    const name = formData.get("name") as string;
-    const slug = formData.get("slug") as string;
-    const description =
-      (formData.get("description") as string) || "New Content Type (Pending)";
-
-    addOptimisticContentType({
-      id: `temp-${Date.now()}`,
-      name: name,
-      slug: slug,
-      description: description,
-      fieldsCount: 0,
-      lastUpdated: new Date(),
-      isOptimistic: true,
+      // 2. Server execution
+      result = await createContentTypeAction(formData);
     });
 
     return result;
   };
 
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      setOptimistic({ type: "DELETE", payload: id });
+      await deleteContentTypeAction(id);
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-        Content Types Dashboard
-      </h1>
+      <h1 className="text-3xl font-bold dark:text-white">Dashboard</h1>
 
       <Modal
-        initialOpen={false}
         trigger={<Button variant="primary">Create New Content Type</Button>}
       >
-        <ModalHeader title="Create New Content Type" />
+        <ModalHeader title="New Content Type" />
         <ModalContent>
           <ContentTypeForm action={handleCreate} />
         </ModalContent>
       </Modal>
 
-      <div className="mt-6 overflow-hidden rounded-lg bg-white shadow-md dark:bg-[#1c1c1c] border dark:border-gray-800">
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+      <div className="mt-6 overflow-hidden rounded-lg bg-white dark:bg-[#1c1c1c] border dark:border-gray-800 shadow">
+        <ul className="divide-y dark:divide-gray-800">
           {optimisticContentTypes.map((type) => (
             <li
               key={type.id}
-              className={`p-4 ${type.isOptimistic ? "opacity-50" : ""}`}
+              className={`group flex items-center justify-between p-4 ${
+                type.isOptimistic ? "opacity-40 animate-pulse" : ""
+              }`}
             >
-              <div className="font-medium text-gray-900 dark:text-gray-100">
-                {type.name}{" "}
-                <span className="text-gray-500 text-sm">({type.slug})</span>
+              <div className="flex-1">
+                <div className="font-medium dark:text-gray-100">
+                  {type.name}{" "}
+                  <span className="text-gray-500 text-sm">({type.slug})</span>
+                </div>
+                <div className="text-sm text-gray-500">{type.description}</div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {type.description}
-              </div>
+              {!type.isOptimistic && (
+                <button
+                  onClick={() => handleDelete(type.id)}
+                  disabled={isPending}
+                  className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <TrashIcon size={20} />
+                </button>
+              )}
             </li>
           ))}
         </ul>

@@ -71,57 +71,31 @@ To prevent data corruption and improve UX, the system implements a multi-layer v
 The project follows a "High-Level Client Entry" pattern. The Home page (RSC) fetches the data and passes it to DashboardList (RCC), which manages the interactive state and optimistic updates.
 
 ```tsx
-// src/components/content/DashboardList.tsx (Refined RCC Pattern)
+// src/components/content/DashboardList.tsx (Final Atomic Pattern)
 
-export function DashboardList({ initialContentTypes }: DashboardListProps) {
-  // 1. Optimistic UI State
-  const [optimisticTypes, addOptimistic] = useOptimistic(
-    initialContentTypes,
-    (state, newType) => [...state, { ...newType, isOptimistic: true }]
-  );
+const handleCreate = async (formData: FormData) => {
+  let result: ActionResponse;
 
-  // 2. Integration with Server Actions & Zod
-  const handleCreate = async (formData: FormData) => {
-    // 1) Validate on Server FIRST
-    const result = await createContentTypeAction(formData);
-
-    // 2) Short-circuit if Zod fails
-    if (result && !result.success) return result;
-
-    // 3) Trigger Optimistic UI only if valid
-    addOptimistic({
-      name: formData.get("name"),
-      slug: formData.get("slug"),
-      id: Date.now().toString(),
-      isOptimistic: true,
+  // KEY: startTransition keeps the optimistic state alive until the server revalidates
+  startTransition(async () => {
+    // 1. Instant UI update
+    dispatch({
+      type: "ADD",
+      payload: {
+        id: Date.now().toString(),
+        name: formData.get("name"),
+        isOptimistic: true,
+      },
     });
 
-    return result;
-  };
+    // 2. Server execution (Zod validation happens inside here)
+    result = await createContentTypeAction(formData);
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold dark:text-white">Dashboard</h1>
+    // If the server action fails, React automatically rolls back the UI
+  });
 
-      {/* Compound Component Pattern for Modals */}
-      <Modal trigger={<Button>Create New Content Type</Button>}>
-        <ModalHeader title="Create New Content Type" />
-        <ModalContent>
-          <ContentTypeForm action={handleCreate} />
-        </ModalContent>
-      </Modal>
-
-      {/* Table renders the optimistic state */}
-      <div className="bg-white dark:bg-[#1c1c1c] rounded-lg shadow">
-        {optimisticTypes.map((type) => (
-          <div key={type.id} className={type.isOptimistic ? "opacity-50" : ""}>
-            {type.name}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+  return result;
+};
 ```
 
 This pattern ensures:

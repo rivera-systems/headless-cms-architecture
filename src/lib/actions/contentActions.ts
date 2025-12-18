@@ -1,15 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  createContentType,
+  deleteContentType,
+} from "@/services/contentService";
 import { contentTypeSchema } from "../schemas/contentTypeSchema";
 
-// Define a type for the response to keep it consistent
+// Explicitly export the type so it can be imported in the DashboardList
 export type ActionResponse = {
   success: boolean;
   message: string;
-  errors?: Record<string, string[]>; // Holds Zod field errors
+  errors?: Record<string, string[]>;
 };
 
+/**
+ * Server action to create a content type with server-side validation.
+ */
 export async function createContentTypeAction(
   formData: FormData
 ): Promise<ActionResponse> {
@@ -22,7 +29,6 @@ export async function createContentTypeAction(
   const validatedFields = contentTypeSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
-    // FIX: Access fieldErrors from the flattened error object
     return {
       success: false,
       message: "Validation failed",
@@ -30,13 +36,21 @@ export async function createContentTypeAction(
     };
   }
 
-  // Simulate DB save
-  console.log("Saving to DB:", validatedFields.data);
+  // Persist the data in the service before revalidating
+  await createContentType(validatedFields.data);
 
   revalidatePath("/");
+  return { success: true, message: "Created successfully" };
+}
 
-  return {
-    success: true,
-    message: "Content type created successfully",
-  };
+/**
+ * Server action to delete a content type.
+ */
+export async function deleteContentTypeAction(
+  id: string
+): Promise<ActionResponse> {
+  await deleteContentType(id);
+
+  revalidatePath("/");
+  return { success: true, message: "Deleted successfully" };
 }

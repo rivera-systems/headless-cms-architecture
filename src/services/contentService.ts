@@ -1,14 +1,7 @@
-import {
-  MS_IN_DAY,
-  MS_IN_HOUR,
-  MS_IN_MINUTE,
-  MS_IN_SECOND,
-} from "@/lib/constants/time";
+import { MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE } from "@/lib/constants/time";
 import { ContentType } from "@/lib/types/content";
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const mockContentTypes: ContentType[] = [
+let mockContentTypes: ContentType[] = [
   {
     id: "ct-1",
     name: "Post",
@@ -36,41 +29,38 @@ const mockContentTypes: ContentType[] = [
 ];
 
 /**
- * Service that simulates fetching the list of Content Types.
- * This function is designed to be called only from a React Server Component (RSC).
- * @returns Promise that resolves to an array of ContentType.
+ * Retrieves all content types from the memory store.
  */
 export async function getContentViews(): Promise<ContentType[]> {
-  // Simulate an async fetch and network/DB latency
-  await delay(MS_IN_SECOND);
-
-  // In a real environment, this would be a fetch(db_url) or db.query()
-  return mockContentTypes;
+  return [...mockContentTypes];
 }
 
 /**
- * Simulates saving a new Content Type to the database.
- * @param newType Object containing the name and slug of the new type.
- * @returns Promise that resolves to the ID of the new Content Type.
+ * Persists a new content type to the memory store.
  */
-export async function createContentType(newType: {
+export async function createContentType(data: {
   name: string;
   slug: string;
-}): Promise<string> {
-  await delay(MS_IN_SECOND * 0.5); // Simulate DB latency
-
-  const newId = `ct-${mockContentTypes.length + 1}`;
-
-  const newContentType: ContentType = {
-    id: newId,
-    name: newType.name,
-    slug: newType.slug,
-    description: "New Content Type created by user.",
+  description?: string;
+}) {
+  const newType: ContentType = {
+    id: Math.random().toString(36).substr(2, 9),
+    name: data.name,
+    slug: data.slug,
+    description: data.description || "",
     fieldsCount: 0,
     lastUpdated: new Date(),
   };
 
-  mockContentTypes.push(newContentType); // Añadir al mock (en memoria)
+  mockContentTypes.push(newType);
+  return newType;
+}
 
-  return newId;
+/**
+ * Removes a content type by ID from the memory store.
+ */
+export async function deleteContentType(id: string) {
+  // Re-assigning the filtered array to the let variable
+  mockContentTypes = mockContentTypes.filter((item) => item.id !== id);
+  return { success: true };
 }
