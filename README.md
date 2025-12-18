@@ -32,11 +32,7 @@ The process of creating new content types is handled entirely on the client side
 - **Compound Component Fix:** The `Modal` component's internal rendering logic was corrected to ensure it **unconditionally renders its children**, resolving critical rendering errors where the dashboard table (RSC) disappeared when the modal was present.
 - **Form Integration:** The form logic is isolated in a Client Component (`ContentTypeForm.tsx`) using `useState` for controlled inputs and dynamic slug generation, and it uses `useModal()` to close the dialog.
 
-### 3. [Next] Data Mutation and Optimistic UI
-
-This upcoming module will implement the data persistence flow: simulating a server-side POST request from the Client Component Form and using Next.js's native cache invalidation (`revalidatePath`) to update the dashboard without a full page reload, leveraging the App Router's data fetching capabilities.
-
-### 4. Data Mutation & Optimistic UI (Server Actions)
+### 3. Data Mutation & Optimistic UI (Server Actions)
 
 The system implements a full-stack data mutation flow using Next.js **Server Actions**, providing a seamless "zero-latency" feel.
 
@@ -44,12 +40,20 @@ The system implements a full-stack data mutation flow using Next.js **Server Act
 - **Server Actions:** Data is processed securely on the server via `createContentTypeAction`, which handles validation and persistence logic.
 - **Automatic Revalidation:** Uses `revalidatePath('/')` to purge the client cache and fetch fresh data without a full page reload, maintaining the SPA-like experience within RSC.
 
-### 5. Advanced Dark Mode & UI Hierarchy
+### 4. Advanced Dark Mode & UI Hierarchy
 
 A custom-engineered dark mode that prioritizes visual ergonomics and depth.
 
 - **Color Palettes:** Balanced contrast using deep grays (`#121212`) for the base and elevated surfaces (`#1c1c1c`) for cards and modals.
 - **CSS Variable Overrides:** Strategic use of Tailwind utility classes to override global CSS variables, ensuring high-contrast labels and readable placeholders in all themes.
+
+### 5. Automated Loading States (Streaming)
+
+To enhance perceived performance, the application implements the **Instant Loading State** pattern using Next.js `loading.tsx`.
+
+- **Skeleton Pattern:** Instead of a blank screen, users see a pulsing "Skeleton" UI that mimics the dashboard's structure during data fetching.
+- **Zero Configuration:** Leverages React Suspense boundaries to automatically swap the loading state for the actual content once the server promise resolves.
+- **Visual Consistency:** The skeleton uses the same elevated background colors (`#1c1c1c`) as the final UI to prevent layout shifts and maintain theme integrity.
 
 ---
 
@@ -106,6 +110,10 @@ This pattern ensures:
 - **Instant Responsiveness**: Users see their changes immediately.
 - **Server-Side Security**: Data is validated and persisted via Server Actions.
 - **Visual Hierarchy**: Components use specific dark-mode backgrounds (#1c1c1c) to stand out from the main page.
+
+### ⌛ UX Strategy: Loading States
+
+Since the project uses `unstable_noStore()` to ensure fresh data, we use the `loading.tsx` file-based convention. This allows Next.js to stream the UI immediately while the server-side data fetching (`getContentViews`) is in progress, providing instant feedback without manual state management.
 
 ## ⚙️ Critical Technical Challenges Overcome
 
