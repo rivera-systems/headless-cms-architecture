@@ -1,13 +1,9 @@
 "use client";
 
 import { useOptimistic } from "react";
-import { createContentTypeAction } from "@/actions";
+import { createContentTypeAction } from "@/lib/actions/contentActions"; // Check path
 import { ContentType } from "@/lib/types/content";
-import Modal, {
-  ModalTrigger,
-  ModalContent,
-  ModalHeader,
-} from "@/components/ui/Modal/Modal";
+import Modal, { ModalContent, ModalHeader } from "@/components/ui/Modal/Modal";
 import Button from "@/components/ui/Button";
 import { ContentTypeForm } from "./ContentTypeForm";
 
@@ -29,30 +25,34 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
     }
   );
 
-  // Wrapper function for the Server Action (handles Optimistic UI flow)
+  // Wrapper function for the Server Action (handles Validation and Optimistic UI flow)
   const handleCreate = async (formData: FormData) => {
+    // 1. Invoke the Server Action and get the Zod validation result
+    const result = await createContentTypeAction(formData);
+
+    // 2. If validation failed, return the result to ContentTypeForm to show errors
+    // and STOP the optimistic update.
+    if (result && !result.success) {
+      return result;
+    }
+
+    // 3. If validation passed, trigger the Optimistic Action
     const name = formData.get("name") as string;
     const slug = formData.get("slug") as string;
+    const description =
+      (formData.get("description") as string) || "New Content Type (Pending)";
 
-    if (!name || !slug) return;
-
-    // A. Optimistic Action: Update UI BEFORE server response
     addOptimisticContentType({
       id: `temp-${Date.now()}`,
       name: name,
       slug: slug,
-      description: "New Content Type (Pending)",
+      description: description,
       fieldsCount: 0,
       lastUpdated: new Date(),
       isOptimistic: true,
     });
 
-    // B. Real Mutation: Invoke the Server Action
-    try {
-      await createContentTypeAction(formData);
-    } catch (error) {
-      console.error("Mutation failed:", error);
-    }
+    return result;
   };
 
   return (

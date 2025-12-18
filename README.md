@@ -55,6 +55,15 @@ To enhance perceived performance, the application implements the **Instant Loadi
 - **Zero Configuration:** Leverages React Suspense boundaries to automatically swap the loading state for the actual content once the server promise resolves.
 - **Visual Consistency:** The skeleton uses the same elevated background colors (`#1c1c1c`) as the final UI to prevent layout shifts and maintain theme integrity.
 
+### 6. Type-Safe Validation (Zod + Server Actions)
+
+To prevent data corruption and improve UX, the system implements a multi-layer validation strategy.
+
+- **Schema-Driven Security:** Centralized schemas using **Zod** define strict rules (e.g., lowercase-only slugs, description length limits).
+- **Server-Side Enforcement:** Validation occurs within the Server Action before any database operation, ensuring a "security-first" approach.
+- **Validation-First Optimism:** The UI logic only triggers the `useOptimistic` hook after the server confirms the payload is valid, preventing "junk data" from appearing in the dashboard.
+- **Accessible Error UX:** Real-time error feedback using a centralized `Icons.tsx` library, featuring high-contrast warning indicators designed specifically for dark mode ergonomics.
+
 ---
 
 ## 🧩 Usage Example & Server/Client Boundary Strategy
@@ -71,13 +80,23 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
     (state, newType) => [...state, { ...newType, isOptimistic: true }]
   );
 
-  // 2. Integration with Server Actions
+  // 2. Integration with Server Actions & Zod
   const handleCreate = async (formData: FormData) => {
-    // Add temporary UI feedback
-    addOptimistic({ name: formData.get("name"), ... });
+    // 1) Validate on Server FIRST
+    const result = await createContentTypeAction(formData);
 
-    // Execute server-side persistence
-    await createContentTypeAction(formData);
+    // 2) Short-circuit if Zod fails
+    if (result && !result.success) return result;
+
+    // 3) Trigger Optimistic UI only if valid
+    addOptimistic({
+      name: formData.get("name"),
+      slug: formData.get("slug"),
+      id: Date.now().toString(),
+      isOptimistic: true,
+    });
+
+    return result;
   };
 
   return (
@@ -94,7 +113,7 @@ export function DashboardList({ initialContentTypes }: DashboardListProps) {
 
       {/* Table renders the optimistic state */}
       <div className="bg-white dark:bg-[#1c1c1c] rounded-lg shadow">
-        {optimisticTypes.map(type => (
+        {optimisticTypes.map((type) => (
           <div key={type.id} className={type.isOptimistic ? "opacity-50" : ""}>
             {type.name}
           </div>
@@ -173,6 +192,13 @@ A conflict arose where native CSS variables in `globals.css` were overriding Tai
 
 - **Challenge:** The `body { background: var(--background) }` rule was too specific, preventing components from having distinct dark backgrounds.
 - **Resolution:** Moved background logic to Tailwind utility classes directly in `layout.tsx` (`dark:bg-[#121212]`). This allowed for a granular visual hierarchy where modals and tables can have elevated background colors (`#1c1c1c`) distinct from the main page.
+
+### 5️⃣ Strategic UI Modularization (Icons)
+
+To maintain a clean and scalable codebase, SVG assets were externalized into a dedicated `Icons.tsx` component library.
+
+- **Challenge:** Inlining SVGs within forms cluttered the logic and made icons hard to reuse.
+- **Resolution:** Implemented a flexible `IconProps` interface allowing for dynamic sizing and Tailwind class injection, ensuring consistent visual language across the entire CMS interface.
 
 ## 🏁 Getting Started
 
