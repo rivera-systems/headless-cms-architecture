@@ -208,3 +208,21 @@ This repository serves as:
 - Demonstrates production-ready Compound Component patterns
 - Prioritizes type safety, composability, and scalability
 - Avoids common pitfalls in Server / Client component interoperability
+
+## 📂 Technical Documentation Hub
+
+This project is fully documented following enterprise standards for architectural transparency.
+
+### 🏛 Architecture Decisions (ADRs)
+
+- [ADR-001: Compound Component Pattern](./docs/architecture/ADR-001-compound-components.md) - Rationale behind modular UI components.
+- [ADR-002: Optimistic UI Strategy](./docs/architecture/ADR-002-optimistic-ui-strategy.md) - High-level decision on state management.
+
+### 🛠 Technical Specifications
+
+- [State Synchronization & Optimistic Updates](./docs/technical-specs/state-synchronization-and-optimistic-updates.md) - Deep dive into React 19 transition atomicity.
+- [ZOD Validation & Error Handling](./docs/technical-specs/ZOD-validation-and-error-handling.md) - Schema-driven security and propagation.
+
+### 🧩 Design Patterns
+
+- [Server-Client Composition](./docs/patterns/server-client-composition-strategy.md) - Strategy for RSC/RCC boundary integrity.
